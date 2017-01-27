@@ -8,13 +8,13 @@
 
 """bin2s.py: Convert binary files to GCC asm modules.
 
-For gfx/foo.bin it will write foo_bin (an array of char), foo_bin_end, and foo_bin_len (an unsigned int).
-For 4bit.chr it will write _4bit_chr, _4bit_chr_end, and _4bit_chr_len.
+For gfx/foo.bin it will write foo_bin (an array of char), foo_bin_end, and foo_bin_size (an unsigned int).
+For 4bit.chr it will write _4bit_chr, _4bit_chr_end, and _4bit_chr_size.
 
 Ported to python from https://github.com/devkitPro/general-tools/blob/master/bin2s.c"""
 
 
-from optparse import OptionParser
+import argparse
 import os.path
 import re
 import sys
@@ -74,37 +74,38 @@ def bin2s(file_path, alignment=_default_alignment, line_length=_default_line_len
 
 
 def main():
-    parser = OptionParser(usage='Usage: %prog [options] <files...>')
-    parser.add_option('-a', '--alignment',
-                      help='Boundary alignment, in bytes [default: %default]',
-                      dest='alignment', type='int', default=_default_alignment)
-    parser.add_option('-l', '--line-length',
-                      help='Length of data lines to output, in bytes [default: %default]',
-                      dest='line_length', type='int', default=_default_line_length)
-    parser.add_option('-o', '--output',
-                      help='Output file [default: %default]',
-                      dest='output', default='-')
-    (options, args) = parser.parse_args()
+    parser = argparse.ArgumentParser(
+        description='''Convert binary files to GCC asm modules.\n\n
+                       For gfx/foo.bin it will write foo_bin (an array of char), foo_bin_end, and foo_bin_size (an unsigned int).
+                       For 4bit.chr it will write _4bit_chr, _4bit_chr_end, and _4bit_chr_size.''')
+    parser.add_argument('files', metavar='FILE', nargs='+',
+                        help='Binary file to convert to GCC asm')
+    parser.add_argument('-a', '--alignment',
+                        help='Boundary alignment, in bytes [default: %(default)s]',
+                        dest='alignment', type=int, default=_default_alignment)
+    parser.add_argument('-l', '--line-length',
+                        help='Length of data lines to output, in bytes [default: %(default)s]',
+                        dest='line_length', type=int, default=_default_line_length)
+    parser.add_argument('-o', '--output',
+                        help='Output file [default: %(default)s]',
+                        dest='output', default='-')
+    args = parser.parse_args()
 
-    alignment = _default_alignment if options.alignment <= 0 else options.alignment
-    line_length = _default_line_length if options.line_length <= 0 else options.line_length
-
-    if len(args) == 0:
-        parser.print_usage()
-        return 1
+    alignment = _default_alignment if args.alignment <= 0 else args.alignment
+    line_length = _default_line_length if args.line_length <= 0 else args.line_length
 
     try:
-        output = open(options.output, 'w') if options.output != '-' else sys.stdout
+        output = open(args.output, 'w') if args.output != '-' else sys.stdout
     except IOError as e:
         print('bin2s: error: could not open \'%s\' for writing: %s' % (options.output, e.strerror),
               file=sys.stderr)
         return 1
 
-    for file_path in args:
+    for file_path in args.files:
         if not bin2s(file_path, alignment=alignment, line_length=line_length, output=output):
             return 1
 
-    if options.output != '-':
+    if args.output != '-':
         output.close()
 
 if __name__ == '__main__':
